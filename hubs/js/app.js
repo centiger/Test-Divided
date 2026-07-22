@@ -25,9 +25,28 @@ function setOptional(sectionId, contentId, value, renderer){
   box.innerHTML=renderer?renderer(value):formatText(value);
 }
 
+const BIBLE_BOOK_PATTERN='(?:창세기|출애굽기|레위기|민수기|신명기|여호수아|사사기|룻기|사무엘상|사무엘하|열왕기상|열왕기하|역대상|역대하|에스라|느헤미야|에스더|욥기|시편|잠언|전도서|아가|이사야|예레미야|예레미야애가|에스겔|다니엘|호세아|요엘|아모스|오바댜|요나|미가|나훔|하박국|스바냐|학개|스가랴|말라기|마태복음|마가복음|누가복음|요한복음|사도행전|로마서|고린도전서|고린도후서|갈라디아서|에베소서|빌립보서|골로새서|데살로니가전서|데살로니가후서|디모데전서|디모데후서|디도서|빌레몬서|히브리서|야고보서|베드로전서|베드로후서|요한일서|요한이서|요한삼서|유다서|요한계시록)';
+const BIBLE_REF_RE=new RegExp(`${BIBLE_BOOK_PATTERN}\\s*\\d+(?:\\s*(?:장|편))?(?:\\s*[:：]\\s*\\d+)?(?:\\s*[~～\\-–—]\\s*\\d+(?::\\d+)?\\s*(?:장|편)?)?`,'g');
+
+function normalizeCenBibleRef(raw){
+  const text=String(raw||'').replace(/[～–—]/g,'~').replace(/：/g,':').trim();
+  const m=text.match(new RegExp(`^(${BIBLE_BOOK_PATTERN})\\s*(\\d+)(?:\\s*(?:장|편))?(?:\\s*:\s*(\\d+))?`));
+  if(!m)return text;
+  return `${m[1]} ${m[2]}:${m[3]||'1'}`;
+}
+
+function linkifyBibleRefs(value){
+  const escaped=escapeHtml(String(value??''));
+  return escaped.replace(BIBLE_REF_RE,match=>{
+    const ref=normalizeCenBibleRef(match);
+    const href=`https://centiger.github.io/CEN-Bible2.0/?ref=${encodeURIComponent(ref)}`;
+    return `<a class="bibleRefLink" href="${href}" data-bible-ref="${escapeHtml(ref)}">${match}</a>`;
+  });
+}
+
 function formatText(v){
-  if(Array.isArray(v)) return `<ul class="cleanList">${v.map(x=>`<li>${formatInline(x)}</li>`).join('')}</ul>`;
-  return escapeHtml(formatInline(v)).replace(/\n/g,'<br>');
+  if(Array.isArray(v)) return `<ul class="cleanList">${v.map(x=>`<li>${linkifyBibleRefs(formatInline(x))}</li>`).join('')}</ul>`;
+  return linkifyBibleRefs(formatInline(v)).replace(/\n/g,'<br>');
 }
 
 function formatInline(v){
@@ -258,6 +277,13 @@ function renderHubList(){
 }
 
 document.addEventListener('click',e=>{
+  const bible=e.target.closest('[data-bible-ref]');
+  if(bible){
+    e.preventDefault();
+    const ref=bible.dataset.bibleRef;
+    openUrl(`https://centiger.github.io/CEN-Bible2.0/?ref=${encodeURIComponent(ref)}`);
+    return;
+  }
   const url=e.target.closest('[data-url]');
   if(url&&url.dataset.url){e.preventDefault();$('drawer').classList.remove('show');openUrl(url.dataset.url);return}
   const hub=e.target.closest('[data-hub]');
@@ -270,5 +296,5 @@ $('backBtn').onclick=()=>openUrl('../index.html');
 $('hubListBtn').onclick=()=>$('drawer').classList.add('show');
 $('drawerClose').onclick=()=>$('drawer').classList.remove('show');
 $('drawer').onclick=e=>{if(e.target.id==='drawer')$('drawer').classList.remove('show')};
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?verse-fix-20260610').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?bible-link-20260722').catch(()=>{});
 loadData();
