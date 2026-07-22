@@ -141,3 +141,8 @@
   display:block !important;
   box-sizing:border-box !important;
 }
+
+
+/* CEN Bible 2.0 scripture links */
+.bibleRefLink{color:#8b1f18;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px;font-weight:900;cursor:pointer}
+.bibleRefLink:active{opacity:.65}
